@@ -1,8 +1,9 @@
-print (package.path)
+Class = require "class"
+SQLite = require "luasql.sqlite3"
+Grave = require "grave"
+DeadLocation = require "person"
 
-local luasql = require("luasql.sqlite3")
-
-local env = luasql.sqlite3()
+local env = SQLite.sqlite3()
 local conn = env:connect("test.db")
 if conn then
     print("Connected to the database successfully!")
@@ -30,19 +31,6 @@ else
     error("Failed to create grave table.")
 end
 
-local function insertGrave(row, column, width, height, x, y)
-    local insert_query = string.format(
-        "INSERT INTO grave (row, column, width, height, x, y) VALUES (%d, %d, %d, %d, %d, %d)",
-        row, column, width, height, x, y
-    )
-    local result = conn:execute(insert_query)
-    if result then
-        print("Grave inserted successfully!")
-    else
-        error("Failed to insert grave.")
-    end
-end
-
 local row
 for line in io.lines("__graveyard.svg") do
     if line:match('<g class="grave_row grave_row_%d+">') then
@@ -56,18 +44,6 @@ for line in io.lines("__graveyard.svg") do
             for x, y in points:gmatch("(%d+),(%d+)") do
                 table.insert(coords, {tonumber(x), tonumber(y)})
             end
-            if coords[1][2] ~= coords[2][2] or
-                coords[1][1] ~= coords[4][1] or
-                coords[2][1] ~= coords[3][1] or
-                coords[4][2] ~= coords[3][2] then
-                print("Grave is no cube")
-            else
-                grave.width = coords[2][1] - coords[1][1]
-                grave.height = coords[3][2] - coords[2][2]
-                grave.x = coords[1][1] + grave.width / 2
-                grave.y = coords[1][2] + grave.height / 2
-            end
-            insertGrave(grave.row, grave.column, grave.width, grave.height, grave.x, grave.y)
         else
             print("No grave number found in line: " .. line)
         end
