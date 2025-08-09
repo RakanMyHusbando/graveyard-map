@@ -1,69 +1,22 @@
 Class = require "class"
 SQLite = require "luasql.sqlite3"
+Graveyard = require "graveyard"
 Grave = require "grave"
-DeadLocation = require "person"
+DeadLocation = require "dead_location"
 
-local env = SQLite.sqlite3()
-local conn = env:connect("test.db")
-if conn then
-    print("Connected to the database successfully!")
-else
-    conn:close()
-    error("Failed to connect to the database.")
-end
+local sqlite_db_file = "graveyard.db"
 
-local create_grave_table = [[
-CREATE TABLE grave (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    row INTEGER NOT NULL,
-    column INTEGER NOT NULL,
-    width INTEGER NOT NULL,
-    height INTEGER NOT NULL,
-    x INTEGER NOT NULL,
-    y INTEGER NOT NULL
-);
-]]
-local result = conn:execute(create_grave_table)
-if result then
-    print("Grave table created successfully!")
-else
-    conn:close()
-    error("Failed to create grave table.")
-end
+local graveyard = (require "read_from_svg")("graveyard.svg", sqlite_db_file)
 
-local row
-for line in io.lines("__graveyard.svg") do
-    if line:match('<g class="grave_row grave_row_%d+">') then
-        row = tonumber(line:match('grave_row_(%d+)'))
-    elseif row and line:match('<polygon class="grave grave_%d+ fill_1 stroke_1"') then
-        local grave_number = line:match('grave_(%d+)')
-        local points = line:match('points="([^"]+)"')
-        if grave_number and points then
-            local coords = {}
-            local grave = {row=row,column=grave_number,width=0,height=0,x=0,y=0}
-            for x, y in points:gmatch("(%d+),(%d+)") do
-                table.insert(coords, {tonumber(x), tonumber(y)})
-            end
-        else
-            print("No grave number found in line: " .. line)
-        end
-    elseif line:match('</g>') then
-        row = nil
-    end
-end
-
-
+local conn = graveyard:sqlite_connection()
 local cursor = conn:execute("SELECT * FROM grave")
-if cursor then
-    row = cursor:fetch({}, "a")
 
-    while row do
-        print(row.id, row.row, row.column, row.width, row.height, row.x, row.y)
-        row = cursor:fetch(row, "a")
-    end
+if cursor then
+    print("id", "row", "column", "width", "height", "x", "y")
+    local row = cursor:fetch({}, "a")
+    while row do row = cursor:fetch(row, "a") end
 else
     print("No data found in grave table.")
 end
-
 
 conn:close()
