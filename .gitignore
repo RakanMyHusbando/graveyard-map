@@ -1,2 +1,4 @@
 *.svg
 *.csv
+*.sqlite
+*.db
